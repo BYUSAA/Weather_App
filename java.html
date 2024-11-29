@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <style>
+        :root {
+            --bg-opacity: 0.7;
+            --text-color: white;
+            --input-bg: rgba(255, 255, 255, 0.2);
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            background: url('https://media.giphy.com/media/xTkcEQACH24SMPxIQg/giphy.gif') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            transition: background 0.5s ease;
+        }
+        .weather-container {
+            background: rgba(0, 0, 0, var(--bg-opacity));
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            width: 350px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            margin: 28px;
+        }
+        #cityInput {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            background: var(--input-bg);
+            color: var(--text-color);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        #searchBtn {
+            background: linear-gradient(135deg, #1c2127 0%, #1c5451 100%);
+            border: none;
+            color: var(--text-color);
+            padding: 12px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+        #searchBtn:hover {
+            background: linear-gradient(135deg, #1c2127 0%, #3b7e75 100%);
+        }
+        #weatherIcon {
+            font-size: 80px;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        #weatherDetails {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .detail {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        #chartContainer {
+            margin-top: 24px;
+            max-width: 600px;
+            padding-top: 60px;
+            padding-bottom: 160px;
+            display: block;
+            box-sizing: border-box;
+            height: 638px;
+            width: 600px;
+            background: rgba(0, 0, 0, var(--bg-opacity));
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            width: 350px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            margin: 28px;
+        }
+    </style>
+</head>
+<body>
+    <div class="weather-container">
+        <input type="text" id="cityInput" placeholder="Enter city name">
+        <button id="searchBtn">Search</button>
+        <div id="weatherIcon">❓</div>
+        <div id="cityName"></div>
+        <div id="temperature"></div>
+        <div id="weatherDetails">
+            <div class="detail" id="windSpeed"></div>
+            <div class="detail" id="weatherCondition"></div>
+        </div>
+    </div>
+    <canvas id="chartContainer"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const cityInput = document.getElementById('cityInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const weatherIcon = document.getElementById('weatherIcon');
+        const cityNameEl = document.getElementById('cityName');
+        const temperatureEl = document.getElementById('temperature');
+        const windSpeedEl = document.getElementById('windSpeed');
+        const weatherConditionEl = document.getElementById('weatherCondition');
+        const chartContainer = document.getElementById('chartContainer').getContext('2d');
+
+        const weatherConditions = {
+            '0': { 
+                name: 'Clear Sky', 
+                icon: '☀️', 
+                gif: 'https://media.giphy.com/media/2jMtykai8bZhSAt46z/giphy.gif',
+                chartColors: { bg: 'rgba(255, 255, 0, 0.3)', border: 'rgba(255, 255, 0, 0.7)' }
+            },
+            '1': { 
+                name: 'Mainly Clear', 
+                icon: '🌤️', 
+                gif: 'https://media.giphy.com/media/KV1s4kSJHaY3m/giphy.gif',
+                chartColors: { bg: 'rgba(135, 206, 250, 0.3)', border: 'rgba(135, 206, 250, 0.7)' }
+            },
+            '2': { 
+                name: 'Partly Cloudy', 
+                icon: '⛅', 
+                gif: 'https://media.giphy.com/media/kNUDroLCe1KCY/giphy.gif',
+                chartColors: { bg: 'rgba(173, 216, 230, 0.3)', border: 'rgba(173, 216, 230, 0.7)' }
+            },
+            '3': { 
+                name: 'Overcast', 
+                icon: '☁️', 
+                gif: 'https://media.giphy.com/media/fvY8JtKw8Bx3bXYlIi/giphy.gif',
+                chartColors: { bg: 'rgba(105, 105, 105, 0.3)', border: 'rgba(105, 105, 105, 0.7)' }
+            },
+            '51': { 
+                name: 'Light Drizzle', 
+                icon: '🌧️', 
+                gif: 'https://media.giphy.com/media/W9qCmeTuUoaFG/giphy.gif',
+                chartColors: { bg: 'rgba(65, 105, 225, 0.3)', border: 'rgba(65, 105, 225, 0.7)' }
+            },
+            '55': { 
+                name: 'Moderate Drizzle', 
+                icon: '🌧️', 
+                gif: 'https://media.giphy.com/media/l2QE5bDTfjOKHmme4/giphy.gif',
+                chartColors: { bg: 'rgba(30, 144, 255, 0.3)', border: 'rgba(30, 144, 255, 0.7)' }
+            },
+            'default': { 
+                name: 'Unknown', 
+                icon: '❓', 
+                gif: 'https://media.giphy.com/media/D7KKpqObDy3ilnvqDB/giphy.gif?cid=790b76116sshg9nbwz75ofbivs66zjnft91p7te6tm57whn4&ep=v1_gifs_search&rid=giphy.gif&ct=g',
+                chartColors: { bg: 'rgba(128, 128, 128, 0.3)', border: 'rgba(128, 128, 128, 0.7)' }
+            }
+        };
+
+        async function fetchCoordinates(cityName) {
+            const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${cityName}&count=1&language=en&format=json`);
+            const data = await response.json();
+            if (data.results && data.results.length > 0) {
+                return data.results[0];
+            }
+            throw new Error('City not found');
+        }
+
+        async function fetchWeather(lat, lon) {
+            const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m`);
+            const data = await response.json();
+            return data;
+        }
+
+        function renderChart(hourlyTemps, chartColors) {
+            new Chart(chartContainer, {
+                type: 'line',
+                data: {
+                    labels: hourlyTemps.time.map(time => time.split('T')[1]),
+                    datasets: [{
+                        label: 'Temperature Over Time (°C)',
+                        data: hourlyTemps.temperature_2m,
+                        backgroundColor: chartColors.bg,
+                        borderColor: chartColors.border,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { ticks: { color: 'white' } },
+                        y: { ticks: { color: 'white' } }
+                    },
+                    plugins: {
+                        legend: { labels: { color: 'white' } },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                            titleColor: 'white',
+                            bodyColor: 'white'
+                        }
+                    }
+                }
+            });
+        }
+
+        searchBtn.addEventListener('click', async () => {
+            const cityName = cityInput.value.trim();
+            if (!cityName) return;
+
+            try {
+                const coordinates = await fetchCoordinates(cityName);
+                const weatherData = await fetchWeather(coordinates.latitude, coordinates.longitude);
+
+                const currentWeather = weatherData.current_weather;
+                const weatherCode = String(currentWeather.weathercode);
+                const weatherInfo = weatherConditions[weatherCode] || weatherConditions['default'];
+
+                // Update UI
+                weatherIcon.textContent = weatherInfo.icon;
+                document.body.style.backgroundImage = `url(${weatherInfo.gif})`;
+
+                cityNameEl.textContent = `${coordinates.name}, ${coordinates.country}`;
+                temperatureEl.textContent = `${Math.round(currentWeather.temperature)}°C`;
+                windSpeedEl.textContent = `Wind: ${currentWeather.windspeed} km/h`;
+                weatherConditionEl.textContent = weatherInfo.name;
+
+                // Render chart
+                renderChart(weatherData.hourly, weatherInfo.chartColors);
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+    </script>
+</body>
+</html>
